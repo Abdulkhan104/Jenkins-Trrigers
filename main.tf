@@ -10,7 +10,7 @@ terraform {
 }
 
 provider "aws" {
-  region = "eu-north-1" # Stockholm
+  region = "ap-south-1"
 }
 
 # --- Get Default VPC ---
@@ -28,7 +28,7 @@ data "aws_subnets" "default" {
 
 # --- Security Group for EC2 ---
 resource "aws_security_group" "ec2_sg" {
-  name_prefix = "tf-ec2-sg-"
+  name_prefix = "ec2-sg-"  # Auto-generate unique name
   description = "Allow SSH and HTTP access"
   vpc_id      = data.aws_vpc.default.id
 
@@ -56,19 +56,73 @@ resource "aws_security_group" "ec2_sg" {
   }
 
   tags = {
-    Name = "TF-EC2-SecurityGroup"
+    Name = "EC2SecurityGroup"
   }
 }
 
 # --- EC2 Instance ---
 resource "aws_instance" "my_ec2" {
-  ami                         = "ami-06e6ecbbeb4d04d43" # Amazon Linux 2 for eu-north-1
-  instance_type               = "t3.micro"             # Supported type
+  ami                         = "ami-0b982602dbb32c5bd"
+  instance_type               = "t2.medium"
   vpc_security_group_ids      = [aws_security_group.ec2_sg.id]
   associate_public_ip_address = true
   key_name                    = null # No key pair
 
   tags = {
-    Name = "tytyy"
+    Name = "MyTerraformEC2"
+  }
+}
+
+# --- Security Group for RDS ---
+resource "aws_security_group" "rds_sg" {
+  name_prefix = "rds-sg-"  # Auto-generate unique name
+  description = "Allow MySQL access"
+  vpc_id      = data.aws_vpc.default.id
+
+  ingress {
+    description = "Allow MySQL"
+    from_port   = 3306
+    to_port     = 3306
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"] # Consider restricting for security
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = {
+    Name = "RDSSecurityGroup"
+  }
+}
+
+# --- RDS Subnet Group ---
+resource "aws_db_subnet_group" "rds_subnet_group" {
+  name       = "my-rds-subnet-group"
+  subnet_ids = data.aws_subnets.default.ids
+
+  tags = {
+    Name = "MyRDSSubnetGroup"
+  }
+}
+
+# --- RDS MySQL Instance ---
+resource "aws_db_instance" "my_rds" {
+  identifier              = "myterraformdb"
+  engine                  = "mysql"
+  instance_class          = "db.t3.micro"
+  allocated_storage       = 20
+  username                = "admin"
+  password                = "AdminPass123!" # Replace with a variable or secret
+  db_subnet_group_name    = aws_db_subnet_group.rds_subnet_group.name
+  vpc_security_group_ids  = [aws_security_group.rds_sg.id]
+  skip_final_snapshot     = true
+  publicly_accessible     = true
+
+  tags = {
+    Name = "MyTerraformRDS"
   }
 }
