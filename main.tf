@@ -10,7 +10,7 @@ terraform {
 }
 
 provider "aws" {
-  region = "eu-north-1"
+  region = "eu-north-1" # Stockholm
 }
 
 # --- Get Default VPC ---
@@ -28,7 +28,7 @@ data "aws_subnets" "default" {
 
 # --- Security Group for EC2 ---
 resource "aws_security_group" "ec2_sg" {
-  name_prefix = "tf-ec2-sg-" # Auto-generate unique name
+  name_prefix = "tf-ec2-sg-"
   description = "Allow SSH and HTTP access"
   vpc_id      = data.aws_vpc.default.id
 
@@ -62,8 +62,8 @@ resource "aws_security_group" "ec2_sg" {
 
 # --- EC2 Instance ---
 resource "aws_instance" "my_ec2" {
-  ami                         = "ami-0fd2b85ee2b4dc969"
-  instance_type               = "t2.medium"
+  ami                         = "ami-06e6ecbbeb4d04d43" # Amazon Linux 2 for eu-north-1
+  instance_type               = "t3.micro"             # Supported type
   vpc_security_group_ids      = [aws_security_group.ec2_sg.id]
   associate_public_ip_address = true
   key_name                    = null # No key pair
